@@ -1,5 +1,5 @@
 'use strict';
-/* FINANZHORIZONT 2.2 — vollständig lokal, ohne Drittanbieter-Bibliotheken.
+/* FINANZHORIZONT 2.3 — vollständig lokal, ohne Drittanbieter-Bibliotheken.
  * Zwei Entnahmephasen, gemeinsame Monte-Carlo-Pfade, konditionale und gemeinsame
  * Tragfähigkeitsberechnung. ETF- und Inflationsdaten sind statische Beispiele.
  */
@@ -50,6 +50,12 @@ function readSettings(){
 function computeSimulation(s, N=1200){
   const months=s.years*12,c1=s.withdrawYear*12,c2=s.secondOn?s.secondYear*12:months;
   const noDrawYears=Array.from({length:s.years+1},()=>[]),drawYears=Array.from({length:s.years+1},()=>[]),starts1=[],starts2=[],jointCaps=[],firstCaps=[],secondCaps=[];
+  // Deterministic reference: exactly the same monthly cash flows but an annual
+  // effective return achieved without fluctuations, so direct comparison with
+  // standard savings calculators is possible when withdrawals are disabled.
+  const deterministicBuild=[s.capital],deterministicDraw=[s.capital];
+  let deterministicA=s.capital,deterministicB=s.capital;
+  const constantGrowth=Math.pow(1+s.annualReturn/100,1/12);
   let paymentsOk=0,capitalOk=0,zeroPreservedCount=0,seed=91438529;
   const solvencyCaps=[];
   const rnd=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return ((seed>>>0)+.5)/4294967296};
@@ -58,6 +64,15 @@ function computeSimulation(s, N=1200){
   const inflation=1+s.inflation/100;
   const w1=s.withdrawal,w2=s.secondOn?s.secondWithdrawal:0;
   const index=(m,phaseStart)=>s.indexWithdrawal?Math.pow(inflation,Math.floor((m-phaseStart-1)/12)):1;
+  for(let m=1;m<=months;m++){
+    const stage2=s.withdrawOn&&s.secondOn&&m>c2;
+    const stage1=s.withdrawOn&&m>c1;
+    const deposit=!stage1?s.saving:(stage2?s.secondSaving:s.postSaving);
+    const draw=stage1?(stage2?s.secondWithdrawal*index(m,c2):s.withdrawal*index(m,c1)):0;
+    deterministicA=deterministicA*constantGrowth+deposit;
+    deterministicB=Math.max(0,deterministicB*constantGrowth+deposit-draw);
+    if(m%12===0){deterministicBuild.push(deterministicA);deterministicDraw.push(deterministicB)}
+  }
   const preservationTarget=(original,m)=>original*(s.preserve==='real'?Math.pow(inflation,(m-c1)/12):1);
   for(let p=0;p<N;p++){
     let balance=s.capital,A=s.capital,B1=0,B2=0,begin1=s.capital,begin2=s.capital;
@@ -126,10 +141,11 @@ function computeSimulation(s, N=1200){
   [...noDrawYears,...drawYears].forEach(sort);
   sort(starts1);sort(starts2);sort(jointCaps);sort(firstCaps);sort(secondCaps);sort(solvencyCaps);
   const div=y=>s.display==='real'?Math.pow(inflation,y):1;
-  const series=(a,y)=>({year:y,p10:quant(a,.1)/div(y),p50:quant(a,.5)/div(y),p90:quant(a,.9)/div(y)});
-  const build=noDrawYears.map(series);
+  const mean=a=>a.reduce((sum,v)=>sum+v,0)/a.length;
+  const series=(a,y)=>({year:y,p10:quant(a,.1)/div(y),p50:quant(a,.5)/div(y),p90:quant(a,.9)/div(y),average:mean(a)/div(y)});
+  const build=noDrawYears.map((a,y)=>({...series(a,y),constant:deterministicBuild[y]/div(y)}));
   const startMedian=quant(starts1,.5),start2Median=quant(starts2,.5);
-  const draw=drawYears.map((a,y)=>({...series(a,y),without:quant(noDrawYears[y],.5)/div(y),reference:s.withdrawOn&&y>=s.withdrawYear?preservationTarget(startMedian,y*12)/div(y):null}));
+  const draw=drawYears.map((a,y)=>({...series(a,y),constant:deterministicDraw[y]/div(y),without:quant(noDrawYears[y],.5)/div(y),reference:s.withdrawOn&&y>=s.withdrawYear?preservationTarget(startMedian,y*12)/div(y):null}));
   const endings=drawYears[s.years].map(x=>x/div(s.years));
   const mn=Math.max(0,quant(endings,.002)),mx=Math.max(mn+1,quant(endings,.998));
   const bins=12,counts=Array(bins).fill(0);
@@ -148,7 +164,7 @@ function computeSimulation(s, N=1200){
   const bestMedianScale=hasPlan?quant(jointCaps,.5):NaN;
   const solventScale=hasPlan?Math.max(0,quant(solvencyCaps,qpos)):NaN;
   const contributions=s.capital+s.saving*Math.min(s.years,s.withdrawOn?s.withdrawYear:s.years)*12+(s.withdrawOn?s.postSaving*(s.secondOn?s.secondYear-s.withdrawYear:s.years-s.withdrawYear)*12:0)+(s.withdrawOn&&s.secondOn?s.secondSaving*(s.years-s.secondYear)*12:0);
-  return {build,draw,distribution,startMedian,start2Median,median:quant(endings,.5),p10:quant(endings,.1),p90:quant(endings,.9),jointOK,hasPlan,scale,rawJoint,joint1:jointOK?w1*scale:0,joint2:jointOK?w2*scale:0,jointSuccess,zeroSuccess,bestMedianScale,solventScale,solvent1:hasPlan?w1*solventScale:NaN,solvent2:hasPlan?w2*solventScale:NaN,rawFirst,rawSecond,firstCap:Number.isFinite(rawFirst)&&rawFirst>=0?rawFirst:0,secondCap:Number.isFinite(rawSecond)&&rawSecond>=0?rawSecond:0,paymentsOk:100*paymentsOk/N,capitalOk:100*capitalOk/N,contributions};
+  return {build,draw,distribution,startMedian,start2Median,median:quant(endings,.5),mean:mean(endings),constantEnd:deterministicDraw[s.years]/div(s.years),p10:quant(endings,.1),p90:quant(endings,.9),jointOK,hasPlan,scale,rawJoint,joint1:jointOK?w1*scale:0,joint2:jointOK?w2*scale:0,jointSuccess,zeroSuccess,bestMedianScale,solventScale,solvent1:hasPlan?w1*solventScale:NaN,solvent2:hasPlan?w2*solventScale:NaN,rawFirst,rawSecond,firstCap:Number.isFinite(rawFirst)&&rawFirst>=0?rawFirst:0,secondCap:Number.isFinite(rawSecond)&&rawSecond>=0?rawSecond:0,paymentsOk:100*paymentsOk/N,capitalOk:100*capitalOk/N,contributions};
 }
 function showControls(s){
   $('etfGroup').hidden=state.returnMode!=='etf';
@@ -172,7 +188,7 @@ function showControls(s){
   for(const group of ['returnMode','inflationMode','display'])document.querySelectorAll(`[data-group="${group}"]`).forEach(b=>{const active=b.dataset.value===state[group];b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
 }
 function showResults(s,r){
-  [['endMedian',euro(r.median)],['startAtWithdraw',s.withdrawOn?euro(r.startMedian):'–'],['startAtSecond',s.withdrawOn&&s.secondOn?euro(r.start2Median):'–'],['endLow',euro(r.p10)],['endHigh',euro(r.p90)],['preservation',perc(r.capitalOk)],['solvency',perc(r.paymentsOk)]].forEach(([id,v])=>$(id).textContent=v);
+  [['constantEnd',euro(r.constantEnd)],['meanEnd',euro(r.mean)],['rangeEnd',euro(r.p10)+' – '+euro(r.p90)],['endMedian',euro(r.median)],['startAtWithdraw',s.withdrawOn?euro(r.startMedian):'–'],['startAtSecond',s.withdrawOn&&s.secondOn?euro(r.start2Median):'–'],['endLow',euro(r.p10)],['endHigh',euro(r.p90)],['preservation',perc(r.capitalOk)],['solvency',perc(r.paymentsOk)]].forEach(([id,v])=>$(id).textContent=v);
   $('safe1').textContent=!r.hasPlan?'–':r.jointOK?euroSafe(r.joint1):'Ziel verfehlt';
   $('safe2').textContent=!s.secondOn?'Nicht aktiv':!r.hasPlan?'–':r.jointOK?euroSafe(r.joint2):'Ziel verfehlt';
   $('safeConfidence').textContent=s.confidence+' % angestrebte Erfolgswahrscheinlichkeit';
@@ -212,26 +228,27 @@ function showResults(s,r){
 function setCanvasSize(canvas){const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(10,Math.round(rect.width)),h=Math.max(10,Math.round(rect.height));canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return {ctx,w,h}}
 function compact(v){const a=Math.abs(v);if(a>=1e6)return (v/1e6).toLocaleString('de-DE',{maximumFractionDigits:1})+' Mio.';if(a>=1e3)return (v/1000).toLocaleString('de-DE',{maximumFractionDigits:0})+'k';return Math.round(v).toLocaleString('de-DE')}
 function renderLine(id,data,mode='build',marks=[]){if(!data?.length)return;const canvas=$(id);if(canvas.closest('[hidden]'))return;const {ctx,w,h}=setCanvasSize(canvas);ctx.clearRect(0,0,w,h);const L=w<480?54:69,R=21,T=22,B=35,pw=w-L-R,ph=h-T-B,first=data[0].year,last=data[data.length-1].year;
-  const vals=data.flatMap(d=>[d.p10,d.p90,d.without??0,d.reference??0]).filter(Number.isFinite),hi=Math.max(1,Math.max(...vals)*1.12);const x=t=>L+(t-first)/Math.max(1,last-first)*pw,y=v=>T+ph-v/hi*ph;
+  const vals=data.flatMap(d=>[d.p10,d.p90,d.without??0,d.reference??0,d.constant??0]).filter(Number.isFinite),hi=Math.max(1,Math.max(...vals)*1.12);const x=t=>L+(t-first)/Math.max(1,last-first)*pw,y=v=>T+ph-v/hi*ph;
   ctx.font='11px system-ui,-apple-system,sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';for(let i=0;i<=4;i++){const Y=y(hi*i/4);ctx.strokeStyle='#e8edf2';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,Y);ctx.lineTo(w-R,Y);ctx.stroke();ctx.fillStyle='#8b98a8';ctx.fillText(compact(hi*i/4),L-8,Y)}
   ctx.textAlign='center';ctx.textBaseline='top';for(let i=0;i<=5;i++){const t=first+(last-first)*i/5;ctx.fillStyle='#8796a7';ctx.fillText(String(Math.round(t)),x(t),h-B+9)}
   for(const mark of marks){if(mark.year<first||mark.year>last)continue;const X=x(mark.year);ctx.strokeStyle=mark.color;ctx.setLineDash([4,5]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(X,T);ctx.lineTo(X,h-B);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=mark.color;ctx.font='10px system-ui';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(mark.label,X,T+2)}
   ctx.beginPath();data.forEach((d,i)=>i?ctx.lineTo(x(d.year),y(d.p90)):ctx.moveTo(x(d.year),y(d.p90)));for(let i=data.length-1;i>=0;i--)ctx.lineTo(x(data[i].year),y(data[i].p10));ctx.closePath();ctx.fillStyle='rgba(32,169,157,.16)';ctx.fill();
   const line=(fn,color,width,dash=[])=>{ctx.beginPath();let started=false;for(const d of data){const value=fn(d);if(value===null||value===undefined||!Number.isFinite(value))continue;if(!started){ctx.moveTo(x(d.year),y(value));started=true}else ctx.lineTo(x(d.year),y(value))}if(started){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.stroke();ctx.setLineDash([])}};
-  if(mode==='draw'){line(d=>d.without,'#d29d55',2,[7,5]);line(d=>d.reference,'#9caab7',1.5,[4,6])}line(d=>d.p50,'#087f87',2.9);
+  if(mode==='draw'){line(d=>d.without,'#d29d55',2,[7,5]);line(d=>d.reference,'#9caab7',1.5,[4,6])}
+  line(d=>d.constant,'#7b61b5',2.35,[9,4]);line(d=>d.p50,'#087f87',2.9);
 }
 function renderHist(data){const canvas=$('histChart'),{ctx,w,h}=setCanvasSize(canvas);ctx.clearRect(0,0,w,h);const L=w<480?54:69,R=16,T=12,B=43,pw=w-L-R,ph=h-T-B,top=Math.max(10,Math.ceil(Math.max(...data.map(d=>d.percent))/5)*5);ctx.font='11px system-ui,-apple-system,sans-serif';for(let i=0;i<=4;i++){const Y=T+ph-ph*i/4;ctx.strokeStyle='#e9eff3';ctx.beginPath();ctx.moveTo(L,Y);ctx.lineTo(w-R,Y);ctx.stroke();ctx.textAlign='right';ctx.fillStyle='#8494a4';ctx.fillText((top*i/4).toFixed(0)+'%',L-8,Y+3)}const step=pw/data.length;data.forEach((d,i)=>{const ht=d.percent/top*ph,xx=L+i*step+2;ctx.fillStyle=i>=data.length/2?'#0c8e90':'#6bb6b9';ctx.fillRect(xx,T+ph-ht,Math.max(2,step-4),ht)});ctx.fillStyle='#8292a3';ctx.textAlign='center';[0,Math.floor((data.length-1)/2),data.length-1].forEach(i=>ctx.fillText(compact(data[i].center)+' €',L+(i+.5)*step,h-B+16))}
 let lastSettings=null,lastResult=null,timer=null;
-function run(){try{const s=readSettings();showControls(s);const r=computeSimulation(s);lastSettings=s;lastResult=r;showResults(s,r);const marks=s.withdrawOn?[{year:s.withdrawYear,label:'Rente 1',color:'#2c8190'},...(s.secondOn?[{year:s.secondYear,label:'Rente 2',color:'#b68136'}]:[])]:[];renderLine('buildChart',r.build,'build',marks);if(s.withdrawOn)renderLine('withdrawChart',r.draw,'draw',marks);renderHist(r.distribution);try{localStorage.setItem('fh_settings_v22',JSON.stringify(s))}catch(_){}}catch(err){$('warning').hidden=false;$('warning').textContent='Die Berechnung ist fehlgeschlagen: '+String(err.message||err);console.error(err)}}
+function run(){try{const s=readSettings();showControls(s);const r=computeSimulation(s);lastSettings=s;lastResult=r;showResults(s,r);const marks=s.withdrawOn?[{year:s.withdrawYear,label:'Rente 1',color:'#2c8190'},...(s.secondOn?[{year:s.secondYear,label:'Rente 2',color:'#b68136'}]:[])]:[];renderLine('buildChart',r.build,'build',marks);if(s.withdrawOn)renderLine('withdrawChart',r.draw,'draw',marks);renderHist(r.distribution);try{localStorage.setItem('fh_settings_v23',JSON.stringify(s))}catch(_){}}catch(err){$('warning').hidden=false;$('warning').textContent='Die Berechnung ist fehlgeschlagen: '+String(err.message||err);console.error(err)}}
 function schedule(){clearTimeout(timer);timer=setTimeout(run,75)}
 function restore(values){const o={...DEFAULTS,...values};for(const [k,id] of Object.entries({capital:'capital',saving:'saving',years:'years',isin:'isin',discount:'discount',manualRate:'manualRate',manualVol:'manualVol',country:'country',manualInfl:'manualInfl',withdrawYear:'withdrawYear',postSaving:'postSaving',withdrawal:'withdrawal',secondYear:'secondYear',secondSaving:'secondSaving',secondWithdrawal:'secondWithdrawal',preserve:'preserve',testPeriod:'testPeriod',confidence:'confidence'}))if(o[k]!==undefined)$(id).value=o[k];$('withdrawOn').checked=!!o.withdrawOn;$('secondOn').checked=!!o.secondOn;$('indexWithdrawal').checked=!!o.indexWithdrawal;state.returnMode=['manual','etf'].includes(o.returnMode)?o.returnMode:'etf';state.inflationMode=['country','manual'].includes(o.inflationMode)?o.inflationMode:'country';state.display=['nominal','real'].includes(o.display)?o.display:'real'}
-function csv(){if(!lastSettings||!lastResult)return;const s=lastSettings,r=lastResult;const meta=[`# FINANZHORIZONT V2.2;Entnahme 1 nach ${s.withdrawYear} Jahren;Entnahme 2 ${s.secondOn?'nach '+s.secondYear+' Jahren':'nicht aktiv'}`,`# Startkapital ${s.capital};Sparrate ${s.saving};Rente1 Sparrate ${s.postSaving};Entnahme1 ${s.withdrawal};Rente2 Sparrate ${s.secondSaving};Entnahme2 ${s.secondWithdrawal}`,`# Rendite ${s.annualReturn}%;Volatilität ${s.volatility}%;Inflation ${s.inflation}%;Werte ${s.display}`];const head='Jahr;Ohne_Entnahme_Median_EUR;Mit_Entnahme_P10_EUR;Mit_Entnahme_Median_EUR;Mit_Entnahme_P90_EUR;Kapitalerhalt_Referenz_EUR';const rows=r.draw.map((x,i)=>[i,r.build[i].p50,x.p10,x.p50,x.p90,x.reference??''].map(v=>typeof v==='number'?v.toFixed(2).replace('.',','):v).join(';'));const blob=new Blob(['\ufeff'+[...meta,head,...rows].join('\r\n')],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='finanzhorizont_2_phasen.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
-function attach(){try{const newData=localStorage.getItem('fh_settings_v22');const v21Data=localStorage.getItem('fh_settings_v21');const v2Data=localStorage.getItem('fh_settings_v2');const oldData=localStorage.getItem('fh_settings_v1');restore(newData?JSON.parse(newData):v21Data?JSON.parse(v21Data):v2Data?JSON.parse(v2Data):oldData?JSON.parse(oldData):DEFAULTS)}catch(_){restore(DEFAULTS)}
+function csv(){if(!lastSettings||!lastResult)return;const s=lastSettings,r=lastResult;const meta=[`# FINANZHORIZONT V2.3;Entnahme 1 nach ${s.withdrawYear} Jahren;Entnahme 2 ${s.secondOn?'nach '+s.secondYear+' Jahren':'nicht aktiv'}`,`# Startkapital ${s.capital};Sparrate ${s.saving};Rente1 Sparrate ${s.postSaving};Entnahme1 ${s.withdrawal};Rente2 Sparrate ${s.secondSaving};Entnahme2 ${s.secondWithdrawal}`,`# Rendite ${s.annualReturn}%;Volatilität ${s.volatility}%;Inflation ${s.inflation}%;Werte ${s.display}`];const head='Jahr;Ohne_Entnahme_Median_EUR;Mit_Entnahme_Konstant_EUR;Mit_Entnahme_Mittelwert_EUR;Mit_Entnahme_P10_EUR;Mit_Entnahme_Median_EUR;Mit_Entnahme_P90_EUR;Kapitalerhalt_Referenz_EUR';const rows=r.draw.map((x,i)=>[i,r.build[i].p50,x.constant,x.average,x.p10,x.p50,x.p90,x.reference??''].map(v=>typeof v==='number'?v.toFixed(2).replace('.',','):v).join(';'));const blob=new Blob(['\ufeff'+[...meta,head,...rows].join('\r\n')],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='finanzhorizont_2_3_ergebnisse.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+function attach(){try{const newData=localStorage.getItem('fh_settings_v23');const v22Data=localStorage.getItem('fh_settings_v22');const v21Data=localStorage.getItem('fh_settings_v21');const v2Data=localStorage.getItem('fh_settings_v2');const oldData=localStorage.getItem('fh_settings_v1');restore(newData?JSON.parse(newData):v22Data?JSON.parse(v22Data):v21Data?JSON.parse(v21Data):v2Data?JSON.parse(v2Data):oldData?JSON.parse(oldData):DEFAULTS)}catch(_){restore(DEFAULTS)}
   document.querySelectorAll('[data-group]').forEach(b=>b.addEventListener('click',()=>{state[b.dataset.group]=b.dataset.value;schedule()}));
   document.querySelectorAll('input,select').forEach(el=>{el.addEventListener('input',schedule);el.addEventListener('change',schedule)});
   $('etfPreset').addEventListener('change',()=>{if($('etfPreset').value!=='other')$('isin').value=$('etfPreset').value;else $('isin').value='';schedule()});
   $('isin').addEventListener('input',()=>{$('isin').value=$('isin').value.toUpperCase().replace(/\s/g,'');schedule()});
-  $('reset').addEventListener('click',()=>{try{localStorage.removeItem('fh_settings_v22');localStorage.removeItem('fh_settings_v21');localStorage.removeItem('fh_settings_v2');localStorage.removeItem('fh_settings_v1')}catch(_){}restore(DEFAULTS);run()});
+  $('reset').addEventListener('click',()=>{try{localStorage.removeItem('fh_settings_v23');localStorage.removeItem('fh_settings_v22');localStorage.removeItem('fh_settings_v21');localStorage.removeItem('fh_settings_v2');localStorage.removeItem('fh_settings_v1')}catch(_){}restore(DEFAULTS);run()});
   $('export').addEventListener('click',csv);
   window.addEventListener('resize',()=>{if(lastResult&&lastSettings){const s=lastSettings,marks=s.withdrawOn?[{year:s.withdrawYear,label:'Rente 1',color:'#2c8190'},...(s.secondOn?[{year:s.secondYear,label:'Rente 2',color:'#b68136'}]:[])]:[];renderLine('buildChart',lastResult.build,'build',marks);if(s.withdrawOn)renderLine('withdrawChart',lastResult.draw,'draw',marks);renderHist(lastResult.distribution)}});
   run();
