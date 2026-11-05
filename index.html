@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Unabhängiger Monte-Carlo-Finanzsimulator für ETF-Sparpläne, Depotvermögen, Inflationsannahmen und Entnahmen." />
+  <meta name="theme-color" content="#0a1424" />
+  <title>Finanzhorizont – ETF-Spar- & Entnahmesimulator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">◈</span><span>FINANZ<span class="brand-alt">HORIZONT</span></span></div>
+    <div class="topbar-right"><span class="status"><span class="live-dot"></span> Lokal berechnet</span><span class="edition">SIMULATOR · V2.2</span></div>
+  </header>
+  <main class="shell">
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-content">
+        <p class="eyebrow">INTERAKTIVE VERMÖGENSPLANUNG</p>
+        <h1 id="page-title">Planen mit <em>Perspektive.</em></h1>
+        <p>Plane dein ETF-Vermögen für eine Person oder ein Paar: Sparphase, erster Ruhestand, zweiter Ruhestand – mit transparenten Marktszenarien und Kaufkraftbetrachtung.</p>
+        <div class="hero-tags"><span>1.200 Simulationen</span><span>ETF-Auswahl per ISIN</span><span>Zwei Ruhestandsphasen</span><span>Ohne Anmeldung</span></div>
+      </div>
+      <div class="hero-orb" aria-hidden="true"><span class="orb-ring one"></span><span class="orb-ring two"></span><span class="orb-core"></span></div>
+    </section>
+    <div class="app-layout">
+      <aside class="sidebar" aria-label="Simulationsparameter">
+        <div class="side-title"><span class="side-caption">SIMULATION</span><h2>Deine Parameter</h2><p>Änderungen werden direkt neu berechnet.</p></div>
+        <section class="control-section">
+          <h3><span class="step">01</span> Depot & Sparplan</h3>
+          <label for="capital">Startkapital / aktueller Depotwert <span class="unit">€</span></label>
+          <input id="capital" type="number" min="0" max="100000000" value="25000" step="1000" inputmode="decimal" />
+          <div class="range-title"><label for="saving">Sparrate vor Entnahme</label><output id="savingValue" for="saving">350 € / Monat</output></div>
+          <input id="saving" type="range" min="0" max="2000" value="350" step="25" />
+          <div class="range-title"><label for="years">Gesamter Anlagehorizont</label><output id="yearsValue" for="years">25 Jahre</output></div>
+          <input id="years" type="range" min="5" max="45" value="25" step="1" />
+        </section>
+        <section class="control-section">
+          <h3><span class="step">02</span> ETF & Rendite</h3>
+          <div class="segmented" role="group" aria-label="Renditequelle"><button type="button" class="active" data-group="returnMode" data-value="etf" aria-pressed="true">ETF-Daten</button><button type="button" data-group="returnMode" data-value="manual" aria-pressed="false">Manuell</button></div>
+          <div id="etfGroup">
+            <label for="etfPreset">ETF auswählen</label>
+            <select id="etfPreset"><option value="IE00BK5BQT80">Vanguard FTSE All-World</option><option value="IE00B4L5Y983">iShares Core MSCI World</option><option value="IE00B5BMR087">iShares Core S&P 500</option><option value="other">Andere ISIN</option></select>
+            <label for="isin">ISIN</label><input id="isin" value="IE00BK5BQT80" spellcheck="false" maxlength="12" autocomplete="off" />
+            <p id="etfInfo" class="source-note">Historische Rendite und Volatilität als Modellannahme.</p>
+            <a id="etfSource" class="source-link" target="_blank" rel="noopener noreferrer" href="https://www.justetf.com/de/etf-profile.html?isin=IE00BK5BQT80">Fondsdaten und Datenquelle ↗</a>
+            <div class="range-title"><label for="discount">Sicherheitsabschlag</label><output id="discountValue">3,0 PP</output></div><input id="discount" type="range" min="0" max="8" step="0.5" value="3" />
+          </div>
+          <div id="manualReturnGroup" hidden>
+            <div class="range-title"><label for="manualRate">Renditeannahme p. a.</label><output id="manualRateValue">6,0 %</output></div><input id="manualRate" type="range" min="-4" max="14" step="0.1" value="6" />
+            <div class="range-title"><label for="manualVol">Volatilität p. a.</label><output id="manualVolValue">15,0 %</output></div><input id="manualVol" type="range" min="5" max="35" step="1" value="15" />
+          </div>
+          <div class="mini-metrics"><span>Aktive Annahme</span><strong id="activeRate">8,5 % Rendite</strong><small id="activeVol">13,7 % Volatilität</small></div>
+        </section>
+        <section class="control-section">
+          <h3><span class="step">03</span> Inflation</h3>
+          <div class="segmented" role="group" aria-label="Inflationsquelle"><button type="button" class="active" data-group="inflationMode" data-value="country" aria-pressed="true">Länderdaten</button><button type="button" data-group="inflationMode" data-value="manual" aria-pressed="false">Manuell</button></div>
+          <div id="countryGroup">
+            <label for="country">Wohnland / Referenzperiode</label><select id="country"><option value="DE2025">Deutschland · Jahresmittel 2025</option><option value="DE2026">Deutschland · Oktober 2026*</option><option value="AT2025">Österreich · Jahresmittel 2025</option><option value="CH2025">Schweiz · Jahresmittel 2025</option><option value="FR2025">Frankreich · Jahresmittel 2025</option><option value="NL2025">Niederlande · Jahresmittel 2025</option></select><p class="source-note" id="inflSource">*Vorläufiger Vorjahresvergleich; keine Jahresprognose.</p>
+          </div>
+          <div id="manualInflGroup" hidden><div class="range-title"><label for="manualInfl">Inflation p. a.</label><output id="manualInflValue">2,0 %</output></div><input id="manualInfl" type="range" min="0" max="10" step="0.1" value="2" /></div>
+          <div class="mini-metrics"><span>Inflationsannahme</span><strong id="inflValue">2,2 % p. a.</strong></div>
+        </section>
+        <section class="control-section">
+          <h3><span class="step">04</span> Ruhestand 1 <label class="toggle" aria-label="Entnahmephasen aktivieren"><input id="withdrawOn" type="checkbox" checked/><span></span></label></h3>
+          <div id="withdrawControls">
+            <p class="section-hint">Partner 1 beendet die Berufstätigkeit. Die Einzahlungen sinken, eine erste Entnahme beginnt.</p>
+            <div class="range-title"><label for="withdrawYear">Beginn nach</label><output id="withdrawYearValue">12 Jahren</output></div>
+            <input id="withdrawYear" type="range" min="1" max="23" step="1" value="12" />
+            <div class="range-title"><label for="postSaving">Monatliche Sparrate ab Ruhestand 1</label><output id="postSavingValue">100 € / Monat</output></div>
+            <input id="postSaving" type="range" min="0" max="2000" step="25" value="100" />
+            <label for="withdrawal">Monatliche Bruttoentnahme ab Ruhestand 1 <span class="unit">€</span></label>
+            <input id="withdrawal" type="number" min="0" max="100000" value="300" step="50" inputmode="decimal" />
+            <div class="subsection" id="secondToggleRow">
+              <label class="checkrow"><input type="checkbox" id="secondOn" checked/> <strong>Ruhestand 2 aktivieren</strong></label>
+              <p class="section-hint small">Für Alleinstehende deaktivieren: Sparrate und Entnahme aus Ruhestand 1 laufen dann unverändert weiter.</p>
+            </div>
+            <div id="secondControls" class="phase-two">
+              <p class="small-head">05 · RUHESTAND 2</p>
+              <p class="section-hint">Partner 2 beendet die Berufstätigkeit. Beide Monatsbeträge können sich erneut ändern.</p>
+              <div class="range-title"><label for="secondYear">Beginn nach</label><output id="secondYearValue">18 Jahren</output></div>
+              <input id="secondYear" type="range" min="13" max="24" step="1" value="18" />
+              <div class="range-title"><label for="secondSaving">Monatliche Sparrate ab Ruhestand 2</label><output id="secondSavingValue">0 € / Monat</output></div>
+              <input id="secondSaving" type="range" min="0" max="2000" step="25" value="0" />
+              <label for="secondWithdrawal">Monatliche Bruttoentnahme ab Ruhestand 2 <span class="unit">€</span></label>
+              <input id="secondWithdrawal" type="number" min="0" max="100000" value="900" step="50" inputmode="decimal" />
+            </div>
+            <label class="checkrow"><input type="checkbox" id="indexWithdrawal"/> Entnahmebeträge jährlich um Inflation erhöhen (jeweils ab Phasenbeginn)</label>
+            <div class="subsection"><p class="small-head">KAPITALERHALT / SICHERHEITSNIVEAU</p>
+              <label for="preserve">Grundvermögen beim Beginn von Ruhestand 1</label>
+              <select id="preserve"><option value="real">Kaufkraft erhalten (real)</option><option value="nominal">Eurobetrag erhalten (nominal)</option></select>
+              <label for="testPeriod">Prüfzeitpunkt</label>
+              <select id="testPeriod"><option value="end">Am Ende</option><option value="annual">Jedes Jahresende</option></select>
+              <label for="confidence">Angestrebte Erfolgswahrscheinlichkeit</label>
+              <select id="confidence"><option value="50">50 % der Simulationen</option><option value="80" selected>80 % der Simulationen</option><option value="90">90 % der Simulationen</option><option value="95">95 % der Simulationen</option></select>
+            </div>
+          </div>
+        </section>
+        <div class="side-actions"><button id="reset" class="btn btn-ghost" type="button">↻ Zurücksetzen</button><button id="export" class="btn btn-outline" type="button">↓ CSV exportieren</button></div>
+      </aside>
+      <div class="dashboard">
+        <div class="dashboard-top"><div><span class="eyebrow dark">DEIN FINANZHORIZONT</span><h2>Simulationsergebnis</h2></div><div class="segmented small" role="group" aria-label="Wertdarstellung"><button type="button" data-group="display" data-value="real" class="active" aria-pressed="true">Heutige Kaufkraft</button><button type="button" data-group="display" data-value="nominal" aria-pressed="false">Nominal</button></div></div>
+        <div class="metric-grid">
+          <article class="metric-card featured"><span>Median-Endvermögen</span><strong id="endMedian">–</strong><small>50. Perzentil · gewählte Entnahmen</small></article>
+          <article class="metric-card"><span>Vermögen bei Ruhestand 1</span><strong id="startAtWithdraw">–</strong><small>Median, nominal</small></article>
+          <article class="metric-card"><span>Vermögen bei Ruhestand 2</span><strong id="startAtSecond">–</strong><small>Median, nominal</small></article>
+          <article class="metric-card"><span>Schwaches Szenario</span><strong id="endLow">–</strong><small>10. Perzentil am Ende</small></article>
+          <article class="metric-card"><span>Starkes Szenario</span><strong id="endHigh">–</strong><small>90. Perzentil am Ende</small></article>
+        </div>
+        <section class="smooth-panel" id="smoothPanel">
+          <div class="smooth-top"><span class="eyebrow dark">OHNE BÖRSENSCHWANKUNGEN · MODELLRECHNUNG</span><h3>Entnahme bei gleichmäßiger jährlicher Rendite</h3>
+            <p>Unterstellt für jedes Jahr genau die eingestellte Rendite. Dies ist eine <strong>rechnerische Vergleichsgröße</strong>, keine garantierte Auszahlung. Die beiden Phasen werden gemeinsam berücksichtigt, einschließlich der geänderten Sparraten und einer ggf. aktivierten Entnahme-Indexierung.</p></div>
+          <div class="smooth-grid">
+            <div><span>Ruhestand 1 · theoretisch monatlich</span><strong id="smooth1">–</strong></div>
+            <div><span>Ruhestand 2 · theoretisch monatlich</span><strong id="smooth2">–</strong></div>
+          </div>
+          <p class="smooth-foot" id="smoothNote">Die Berechnung wird geladen.</p>
+          <div class="smooth-rough"><span><strong>Einfacher Überschlag am Beginn von Ruhestand 1:</strong> realer Renditeüberschuss <b id="roughRealReturn">–</b>, entsprechend <b id="roughMonthly">–</b> pro Monat auf Basis des Median-Startvermögens. Dieser Überschlag berücksichtigt weder zukünftige Sparraten noch die unterschiedliche Entnahme der beiden Phasen.</span></div>
+        </section>
+        <section class="safe-panel" id="safePanel">
+          <div class="safe-head"><span class="eyebrow">GEMEINSAME TRAGFÄHIGKEIT</span><h3>Entnahme mit gewählter Sicherheitswahrscheinlichkeit</h3>
+            <p id="safeDescription">Gemeinsame Berechnung für beide Entnahmephasen.</p>
+            <p class="safe-qualifier">Bei einem verfehlten Kapitalerhaltungsziel zeigt die App „Ziel verfehlt“ statt eines irreführenden Entnahmebetrags. Die zwei Beträge werden <strong>gemeinsam</strong> ermittelt, indem die eingegebenen Entnahmen im selben Verhältnis angepasst werden. Die Modellannahmen garantieren keinen Kapitalerhalt.</p>
+          </div>
+          <div class="safe-pair">
+            <div><span>Ruhestand 1 · monatlich</span><strong id="safe1" aria-live="polite">Wird berechnet …</strong></div>
+            <div><span>Ruhestand 2 · monatlich</span><strong id="safe2" aria-live="polite">Wird berechnet …</strong></div>
+            <small id="safeConfidence">80 % angestrebte Erfolgswahrscheinlichkeit</small>
+            <small>Modellquote bei diesem Entnahmepaar: <b id="safeSuccess">–</b></small>
+          </div>
+        </section>
+        <section id="feasibilityPanel" class="feasibility-panel" aria-live="polite">
+          <div class="feasibility-header"><h3>Warum ist der Kapitalerhalt erreichbar – oder nicht?</h3><span id="baselineBadge" class="feasibility-badge">Prüfung</span></div>
+          <div class="baseline-row"><div><span>Kapitalerhalt bei 0 € Entnahme</span><strong id="baselineChance">–</strong></div><div><span>Gewähltes Sicherheitsziel</span><strong id="targetChance">–</strong></div></div>
+          <p id="feasibilityMessage">Die Ausgangslage wird berechnet.</p>
+          <p class="feasibility-hint">* „Ziel verfehlt“ bedeutet, dass selbst 0 € Entnahme nicht die geforderte Modellwahrscheinlichkeit des Kapitalerhalts erreichen. Auch ohne Auszahlung können Kapitalmarktverluste oder Inflation das Grundvermögen verringern. Der Vergleich bezieht sich auf den Stand bei Ruhestand 1.</p>
+          <p class="feasibility-alternative">Nur zum Vergleich – gemeinsames Entnahmepaar bei <strong>50 %</strong> statt der gewählten Zielwahrscheinlichkeit: <strong id="alternativeMedian">–</strong></p>
+        </section>
+        <div id="warning" class="warning" role="status" hidden></div>
+        <div class="support-grid" id="supportGrid">
+          <div class="support"><span>Kapitalerhalt erreicht</span><strong id="preservation">–</strong><small>bei eingegebenen Entnahmen</small></div>
+          <div class="support"><span>Alle Auszahlungen möglich</span><strong id="solvency">–</strong><small>ohne Zahlungslücke</small></div>
+          <div class="support"><span>Netto-Cashflow · Phase 1</span><strong id="netFlow1">–</strong><small>Einzahlung minus Entnahme</small></div>
+          <div class="support"><span>Netto-Cashflow · Phase 2</span><strong id="netFlow2">–</strong><small>Einzahlung minus Entnahme</small></div>
+        </div>
+        <section class="conditional-panel" id="conditionalPanel">
+          <h3>Alternative Berechnungen: eine Entnahme konstant halten</h3>
+          <p>Diese Maximalwerte gelten <strong>jeweils nur unter Beibehaltung der anderen eingegebenen Entnahme</strong>. Sie dürfen nicht gleichzeitig als neue Maximalwerte eingesetzt werden.</p>
+          <div class="conditional-grid"><div><span>Maximale Entnahme Phase 1</span><strong id="safeFirstFixed">–</strong><small id="firstFixedNote">Bei unveränderter Entnahme in Phase 2</small></div><div><span>Maximale Entnahme Phase 2</span><strong id="safeSecondFixed">–</strong><small id="secondFixedNote">Bei unveränderter Entnahme in Phase 1</small></div></div>
+        </section>
+        <section class="conditional-panel" id="solventOnlyPanel">
+          <h3>Alternative: Entnahme ohne vorzeitige Depoterschöpfung</h3>
+          <p>Dieser Grenzwert verlangt nur, dass die geplanten monatlichen Auszahlungen bis zum Ende des Anlagehorizonts finanzierbar bleiben. <strong>Er garantiert keinen Erhalt des ursprünglichen Vermögens.</strong> Beide Entnahmen werden im Verhältnis deiner Eingaben gemeinsam ermittelt, mit dem gewählten Sicherheitsniveau.</p>
+          <div class="conditional-grid"><div><span>Ruhestand 1 · solvenzorientiert</span><strong id="solventOnlyFirst">–</strong></div><div><span>Ruhestand 2 · solvenzorientiert</span><strong id="solventOnlySecond">–</strong></div></div>
+        </section>
+        <section class="chart-card"><div class="chart-heading"><div><span class="chart-index">01 / AUFBAU</span><h3>Vermögensentwicklung</h3><p>Referenzverlauf ohne Entnahmen bei den je Phase festgelegten Sparraten. Die senkrechten Linien markieren die beiden Ruhestandszeitpunkte.</p></div></div><div class="chart-legend"><span class="legend-med">Median</span><span class="legend-band">10.–90. Perzentil</span></div><div class="canvas-wrap"><canvas id="buildChart" role="img" aria-label="Vermögensentwicklung als Monte-Carlo-Perzentile"></canvas></div></section>
+        <section class="chart-card" id="withdrawChartCard"><div class="chart-heading"><div><span class="chart-index">02 / ENTNAHME</span><h3>Vermögensverlauf über beide Entnahmephasen</h3><p>Vermögen über den gesamten Zeitraum: zwei Ruhestandszeitpunkte, Marktszenarien, Vergleich ohne Entnahmen und Erhaltungsziel.</p></div></div><div class="chart-legend"><span class="legend-med">Median mit Entnahme</span><span class="legend-band">10.–90. Perzentil</span><span class="legend-dash">Median ohne Entnahme</span><span class="legend-ref">Kapitalerhalt</span></div><div class="canvas-wrap"><canvas id="withdrawChart" role="img" aria-label="Entwicklung des Vermögens während der Entnahmephase"></canvas></div><p class="chart-note">Die Referenzlinie basiert auf dem Median beim ersten Ruhestand. Der Kapitalerhalt wird für jeden simulierten Verlauf mit dessen individuellem Vermögen bei Beginn von Ruhestand 1 geprüft.</p></section>
+        <section class="chart-card"><div class="chart-heading"><div><span class="chart-index">03 / VERTEILUNG</span><h3>Wie wahrscheinlich ist welches Endvermögen?</h3><p>Histogramm der 1.200 simulierten Endwerte mit den eingestellten Entnahmen aus beiden Phasen.</p></div></div><div class="canvas-wrap small-height"><canvas id="histChart" role="img" aria-label="Häufigkeitsverteilung simulierter Endvermögen"></canvas></div></section>
+        <section class="assumptions"><h3>Was die Simulation kann – und was nicht</h3><div class="assumption-grid"><p><b>1.200 unabhängige Marktszenarien.</b> Die Monatsrenditen folgen einer lognormalen Verteilung mit konstanter Rendite- und Volatilitätsannahme. Dieselben zufälligen Marktpfade werden bei Parameteränderungen verwendet, damit Vergleiche stabil bleiben.</p><p><b>Glatte Rendite ist keine Zusage.</b> Die separate Berechnung ohne Schwankungen unterstellt dieselbe positive oder negative Jahresrendite in jedem Jahr und ignoriert das Kursrisiko. <b>Kapitalerhaltsprüfung.</b> Wenn schon ohne Entnahmen die gewünschte Erfolgswahrscheinlichkeit verfehlt wird, kann die App keine positive kapitalerhaltende Entnahme ausweisen. Das wird mit der Referenzquote ohne Entnahmen nachvollziehbar gemacht. <b>Keine Garantie.</b> Ein Erhalt des Grundvermögens ist bei Aktien nicht garantiert; Phasenwerte sind Bruttoentnahmen. Die Kapitalerhaltsreferenz wird zum ersten Ruhestand erfasst. Der angegebene Entnahmebetrag gilt nur für den gewählten Zeitraum und das gewählte Modell.</p><p><b>Brutto-Betrachtung.</b> Steuern auf realisierte Gewinne, zusätzliche Depotkosten, individuelle Anschaffungskosten und eine dynamische Veränderung der Asset-Allokation fehlen. ETF-Referenzrenditen sind historische Daten, keine Prognosen.</p><p><b>Keine Live-Daten.</b> Die ISIN- und Inflationswerte sind bewusst eingefrorene, datierte Referenzdaten. Für beliebige ETFs kannst du manuell eine Rendite und Volatilität eingeben.</p></div></section>
+      </div>
+    </div>
+    <footer><p>FINANZHORIZONT · Unabhängiges Demonstrationswerkzeug · Keine Anlage- oder Steuerberatung</p><p>Stand der statischen Referenzdaten: 5. November 2026 · Berechnung im Browser · Keine Übertragung persönlicher Eingaben</p><p><a href="https://www.justetf.com/de/" target="_blank" rel="noopener noreferrer">ETF-Referenzdaten: justETF</a> · <a href="https://www.destatis.de/" target="_blank" rel="noopener noreferrer">Deutschland: Destatis</a> · <a href="https://www.statistik.at/" target="_blank" rel="noopener noreferrer">Österreich: Statistik Austria</a> · <a href="https://statistik.admin.ch/" target="_blank" rel="noopener noreferrer">Schweiz: BFS</a> · <a href="https://www.insee.fr/" target="_blank" rel="noopener noreferrer">Frankreich: INSEE</a> · <a href="https://www.cbs.nl/" target="_blank" rel="noopener noreferrer">Niederlande: CBS</a></p></footer>
+  </main>
+</body>
+</html>
