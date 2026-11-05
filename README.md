@@ -1,31 +1,25 @@
-# Finanzhorizont 2.3 — ETF-Spar- und Entnahmesimulator
+# Finanzhorizont 2.4 — ETF-Spar- und Entnahmesimulator
 
-## Version 2.3
-Neu gegenüber 2.2:
-- **Endvermögen bei konstanter Rendite**, im gleichen Modell mit denselben monatlichen Einzahlungen und bis zu zwei Entnahmephasen.
-- **Monte-Carlo-Mittelwert** der 1.200 Endvermögen.
-- Weiterhin **Monte-Carlo-Median** und **10.–90. Perzentilspanne**.
-- Zusätzliche violette, gestrichelte Kurve **Konstante Rendite** in beiden Zeitreihendiagrammen.
-- CSV-Export ergänzt um konstante Referenz und Monte-Carlo-Mittelwert pro Jahr.
-- Eingaben aus 2.2 werden (wo browserseitig möglich) übernommen.
+## Neue Darstellung in Version 2.4
+- **Monte-Carlo-Median** bleibt der zentrale Endvermögenswert und die durchgezogene türkisfarbene Zeitreihenkurve.
+- **10.–90. Perzentilbereich** zeigt die Modellunsicherheit als farbige Fläche (und als Ergebniswerte).
+- **Konstante Rendite** bleibt die violette gestrichelte Referenzkurve in den zwei Zeitreihendiagrammen und die Vergleichszahl im Ergebnisbereich.
+- **Monte-Carlo-Mittelwert** wird weiterhin berechnet, erscheint aber nur noch im aufklappbaren Abschnitt **„Weitere statistische Kennzahlen“** mit Einordnung.
+- Die Monte-Carlo-Erfolgswahrscheinlichkeiten, alle Spar- und Entnahmephasen, ETF-Auswahl, Inflation und der CSV-Export bleiben erhalten.
+- Neue Asset-Dateipfade mit `?v=24` vermeiden das Anzeigen einer veralteten Browser-Cache-Version bei GitHub Pages.
+- Einstellungen von Version 2.3 und älteren Versionen werden soweit möglich übernommen.
 
-### Rechenkonvention
-Einzahlungen erfolgen jeweils am Ende des Monats. Die konstante jährliche Rendite `r` wird monatlich mit `(1+r)^(1/12)` verzinst. Der Vergleich mit Finanztip/iShares erfolgt ohne Entnahmen, mit 0 % Inflation und nominaler Ansicht.
+## Kontrollfall
+100.000 € Startkapital, 500 €/Monat, 4 % effektive Jahresrendite, 30 Jahre, keine Entnahme, 0 % Inflation: **666.975,03 €** konstante Rendite. Monatliche Zahlungen am Monatsende.
 
-**Kontrollfall**: 100.000 € Startkapital, 500 € Sparrate/Monat, 4 % Effektivrendite/Jahr, 30 Jahre => 666.975,03 € (konstante Rendite).
+## GitHub Pages aktualisieren
+1. Die Dateien `index.html`, `app.js`, `styles.css` und `README.md` aus diesem ZIP ins **Hauptverzeichnis** des bestehenden GitHub-Repositories hochladen und gleichnamige Dateien ersetzen.
+2. Unter **Actions** den erfolgreichen Pages-Deploy prüfen.
+3. Website neu laden oder in einem privaten Browserfenster testen. Oben rechts muss **V2.4** stehen.
+4. GitHub Pages: Settings → Pages → Deploy from a branch → `main` / `(root)`.
 
-Bei 15 % Volatilität ergibt das festgelegte 1.200-Pfade-Monte-Carlo-Modell ungefähr 667.260 € Mittelwert und 522.918 € Median. Der Mittelwert ist eine Zufallsstichprobe und stimmt nicht zwingend exakt mit dem konstanten Renditepfad überein.
+## Offline-Nutzung
+Die separat gelieferte Standalone-HTML-Datei enthält CSS und JavaScript vollständig inline und ist auf Desktop-Browsern ohne Netzwerkverbindung ausführbar. Auf dem iPhone Safari die gehostete HTTPS-Seite verwenden.
 
-Bei zwei Entnahmephasen gelten die eingestellten Monatsbeträge und die ggf. aktivierte Dynamisierung gleichermaßen für Monte Carlo und konstanten Pfad. Bei sehr schlechten Marktverläufen wird ein Depot nie unter 0 € geführt: nicht erfüllte Entnahmen werden separat als Zahlungslücke gewertet.
-
-### Website auf GitHub Pages
-1. Neues öffentliches Repository anlegen (z. B. `finanzhorizont`).
-2. `index.html`, `styles.css`, `app.js` und diese `README.md` im **Hauptverzeichnis** hochladen.
-3. Repository → Settings → Pages → Deploy from a branch → `main` / `(root)` → Save.
-4. Website-Adresse unter `https://BENUTZERNAME.github.io/finanzhorizont/` aufrufen.
-
-### Offline-Nutzung
-Die Datei `Finanzhorizont_2_3_Standalone.html` (separat bereitgestellt) kann auf einem PC direkt im Browser geöffnet werden. Auf iOS kann die Vorschau lokaler HTML-Dateien eingeschränkt sein; eine veröffentlichte HTTPS-Seite in Safari ist zuverlässiger.
-
-### Einschränkungen
-Reine Modellrechnung, keine Anlageberatung. Historische ETF- und Inflationskennzahlen sind fest hinterlegte Beispiele, keine Live-Daten. Annahmen zu Rendite und Volatilität sind keine Prognosen. Das Modell erfasst u. a. keine individuellen Steuern, Gebühren und Veränderungen der Korrelationen/Extremrisiken. Ein positiver Median garantiert keinen Kapitalerhalt.
+## Einschränkungen
+Keine Anlageberatung; Simulation mit vereinfachten lognormalen Renditen und fest hinterlegten ETF-/Inflationsreferenzdaten. Keine Steuern, individuellen Depotgebühren, Extreme-Risk-Modelle oder garantierten Renditen. Ein Median ist keine Garantie.

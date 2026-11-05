@@ -39,3 +39,20 @@
 .metric-grid .metric-card:has(#rangeEnd) strong{font-size:clamp(16px,1.5vw,23px);letter-spacing:-.5px;white-space:normal;overflow-wrap:anywhere}
 .chart-legend .legend-constant:before{background:repeating-linear-gradient(90deg,#7b61b5 0 8px, transparent 8px 12px)}
 @media(max-width:560px){.metric-grid .metric-card:has(#rangeEnd){grid-column:1 / -1}}
+
+/* Version 2.4 – zentraler Median und ergänzende Statistiken */
+.stats-details{margin:14px 0 17px;background:#fff;border:1px solid var(--edge);border-radius:11px;overflow:hidden}
+.stats-details>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;color:#19384b;font-weight:750;list-style:none}
+.stats-details>summary::-webkit-details-marker{display:none}
+.stats-details>summary:after{content:"▾";font-size:18px;color:#087d83;margin-left:8px}
+.stats-details[open]>summary:after{content:"▴"}
+.stats-toggle-label{color:#74849b;font-size:11px;font-weight:500;margin-left:auto}
+.stats-details-body{padding:0 20px 20px;display:grid;grid-template-columns:minmax(190px,.85fr) minmax(0,1.4fr);gap:18px}
+.stats-mean{background:#f2f7f9;border-radius:9px;padding:17px}
+.stats-mean span,.stats-mean small{display:block;color:#677b90;font-size:11px}
+.stats-mean strong{display:block;font-size:clamp(24px,2.2vw,32px);color:#15364a;letter-spacing:-.7px;font-variant-numeric:tabular-nums;margin:6px 0}
+.stats-mean small{line-height:1.6}
+.stats-explain{font-size:12px;color:#617288;line-height:1.62}
+.stats-explain p{margin:0 0 9px}
+.stats-explain b{color:#1c3b50}
+@media(max-width:650px){.stats-details-body{grid-template-columns:1fr}.stats-details>summary{padding:14px}.stats-toggle-label{font-size:10px}.stats-details-body{padding:0 14px 14px}}
