@@ -36,11 +36,11 @@
 /* Version 2.3 – direkte Vergleichbarkeit von Zinseszins und Monte Carlo */
 .metric-reference{background:#f8f6ff;border-color:#e1d7f5}
 .metric-reference strong{color:#694da3}
-.metric-grid .metric-card:has(#rangeEnd) strong{font-size:clamp(16px,1.5vw,23px);letter-spacing:-.5px;white-space:normal;overflow-wrap:anywhere}
-.chart-legend .legend-constant:before{background:repeating-linear-gradient(90deg,#7b61b5 0 8px, transparent 8px 12px)}
-@media(max-width:560px){.metric-grid .metric-card:has(#rangeEnd){grid-column:1 / -1}}
 
-/* Version 2.4 – zentraler Median und ergänzende Statistiken */
+.chart-legend .legend-constant:before{background:repeating-linear-gradient(90deg,#7b61b5 0 8px, transparent 8px 12px)}
+
+
+/* Version 2.5 – sechs zentrale Kennzahlen und erläuternde Statistiken */
 .stats-details{margin:14px 0 17px;background:#fff;border:1px solid var(--edge);border-radius:11px;overflow:hidden}
 .stats-details>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;color:#19384b;font-weight:750;list-style:none}
 .stats-details>summary::-webkit-details-marker{display:none}
@@ -56,3 +56,11 @@
 .stats-explain p{margin:0 0 9px}
 .stats-explain b{color:#1c3b50}
 @media(max-width:650px){.stats-details-body{grid-template-columns:1fr}.stats-details>summary{padding:14px}.stats-toggle-label{font-size:10px}.stats-details-body{padding:0 14px 14px}}
+
+/* Version 2.5: six consistent output cards and responsive range display. */
+.metric-grid>.metric-range{grid-column:1 / -1}
+.metric-grid>.metric-range strong{font-size:clamp(20px,2.1vw,29px);white-space:normal;overflow:visible;overflow-wrap:anywhere}
+.metric-display-note{margin:9px 2px 13px;color:#637b8d;font-size:11px;line-height:1.55}
+.stats-details-body.stats-explain-only{display:block}
+.stats-details-body.stats-explain-only .stats-explain{max-width:920px}
+@media(max-width:560px){.metric-grid>.metric-range strong{font-size:clamp(18px,4.8vw,23px)}}
